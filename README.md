@@ -2,38 +2,27 @@
 
 Multiplatform management UI for vLLM with OpenAI-compatible API.
 
-## Architecture
-
-```
-Agents (LangChain, OpenAI SDK) ────> vLLM :8001 (/v1/chat/completions, tool calling)
-                                          ▲
-Browser (Web UI) ──────────────────────> Panel :8500 (manage/monitor)
-```
-
-- **vLLM** runs as a separate process with full OpenAI-compatible API
-- **Panel** manages vLLM lifecycle and provides a web UI for chat/testing
-- **Agents** connect directly to vLLM at `http://localhost:8001/v1`
-
 ## Quick Start
 
-### Windows
-```cmd
-vllm-panel.bat
+### One-line install and run
+
+**Linux / macOS:**
+```bash
+curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.sh | bash
 ```
 
-### Linux
-```bash
-chmod +x vllm-panel-linux.sh && ./vllm-panel-linux.sh
+**Windows (PowerShell):**
+```powershell
+curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.bat -o run.bat && run.bat
 ```
 
-### macOS
-```bash
-chmod +x vllm-panel-macos.sh && ./vllm-panel-macos.sh
-```
+The script clones the repo, creates a virtual environment, installs dependencies, and starts the server.
 
-## Manual
+### Manual install
 
 ```bash
+git clone https://github.com/ksen145/vLLM-Panel.git
+cd vLLM-Panel
 pip install -r requirements.txt
 pip install vllm        # Linux/Windows
 pip install mlx-lm      # macOS (Apple Silicon)
