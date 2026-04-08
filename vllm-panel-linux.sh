@@ -25,7 +25,7 @@ start() {
         echo "Already running (PID: $(cat "$PID_FILE"))"
     else
         echo "Starting vLLM Panel..."
-        cd "$SCRIPT_DIR" && nohup python3 main.py > "$LOG_FILE" 2>&1 &
+        cd "$SCRIPT_DIR" && nohup python3 master.py > "$LOG_FILE" 2>&1 &
         echo $! > "$PID_FILE"
         sleep 3
         echo "Started!"

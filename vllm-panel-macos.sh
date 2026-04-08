@@ -13,7 +13,7 @@ start() {
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
         echo "Already running (PID: $(cat "$PID_FILE"))"
     else
-        cd "$SCRIPT_DIR" && nohup python3 main.py > "$LOG_FILE" 2>&1 &
+        cd "$SCRIPT_DIR" && nohup python3 master.py > "$LOG_FILE" 2>&1 &
         echo $! > "$PID_FILE"
         sleep 3
         echo "Started! Panel: http://localhost:8500"

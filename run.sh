@@ -1,14 +1,14 @@
 #!/bin/bash
 # vLLM Panel — one-line installer and launcher
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/master/run.sh | bash
 # or:
 #   chmod +x run.sh && ./run.sh
 
 set -e
 
 REPO="ksen145/vLLM-Panel"
-BRANCH="main"
+BRANCH="master"
 DIR="vllm-panel"
 CLONE_URL="https://github.com/${REPO}.git"
 
@@ -70,4 +70,4 @@ echo "  Starting vLLM Panel"
 echo "  http://localhost:8500"
 echo "========================================"
 echo ""
-python main.py
+python master.py

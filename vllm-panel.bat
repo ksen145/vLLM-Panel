@@ -56,7 +56,7 @@ if !errorlevel! equ 0 (
     echo Panel is already running on port 8500
 ) else (
     echo Starting vLLM Panel...
-    start "vLLM Panel" /MIN cmd /c "python main.py > server.log 2>&1"
+    start "vLLM Panel" /MIN cmd /c "python master.py > server.log 2>&1"
     timeout /t 3 >nul
     echo Started!
     echo   Panel: http://localhost:8500

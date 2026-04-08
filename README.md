@@ -8,12 +8,12 @@ Multiplatform management UI for vLLM with OpenAI-compatible API.
 
 **Linux / macOS:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.sh | bash
+curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/master/run.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.bat -o run.bat && run.bat
+curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/master/run.bat -o run.bat && run.bat
 ```
 
 The script clones the repo, creates a virtual environment, installs dependencies, and starts the server.
@@ -26,7 +26,7 @@ cd vLLM-Panel
 pip install -r requirements.txt
 pip install vllm        # Linux/Windows
 pip install mlx-lm      # macOS (Apple Silicon)
-python main.py
+python master.py
 ```
 
 Open: `http://localhost:8500`
@@ -114,7 +114,7 @@ Full OpenAI-compatible API at `http://localhost:8001/v1`:
 
 ```
 vLLM Panel/
-├── main.py                  # FastAPI backend (Panel)
+├── master.py                  # FastAPI backend (Panel)
 ├── requirements.txt         # Dependencies
 ├── vllm-panel.bat           # Windows launcher
 ├── vllm-panel-linux.sh      # Linux launcher
