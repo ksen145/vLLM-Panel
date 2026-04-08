@@ -3,10 +3,10 @@ setlocal enabledelayedexpansion
 
 :: vLLM Panel - one-line installer and launcher
 :: Usage:
-::   curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/master/run.bat -o run.bat ^&^& run.bat
+::   curl -sSL https://raw.githubusercontent.com/ksen145/vLLM-Panel/main/run.bat -o run.bat ^&^& run.bat
 
 set REPO=ksen145/vLLM-Panel
-set BRANCH=master
+set BRANCH=main
 set DIR=vllm-panel
 set CLONE_URL=https://github.com/%REPO%.git
 
@@ -60,4 +60,4 @@ echo   Starting vLLM Panel
 echo   http://localhost:8500
 echo ========================================
 echo.
-python master.py
+python main.py
