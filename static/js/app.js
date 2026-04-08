@@ -15,6 +15,7 @@ function navigate(page) {
         case 'server': loadServerPage(); break;
         case 'chat': loadChatPage(); break;
         case 'local': loadLocalModels(); break;
+        case 'search': loadSearchPage(); break;
         case 'status': refreshMetrics(); startAutoRefresh(); break;
     }
     const nc = document.getElementById('navbarNav');
@@ -182,6 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navigate('home');
 
+    // Restore any downloads that were in progress before page reload
+    restoreDownloads();
+
     const autoCheck = document.getElementById('auto-refresh');
     if (autoCheck) {
         autoCheck.addEventListener('change', () => { if (autoCheck.checked) startAutoRefresh(); else stopAutoRefresh(); });
@@ -276,6 +280,11 @@ function loadChatPage() {
         offlineAlert.style.display = 'block';
         sendBtn.disabled = true;
     }
+}
+
+async function loadSearchPage() {
+    // Restore downloads view when navigating to search page
+    await restoreDownloads();
 }
 
 async function sendChat() {
@@ -386,6 +395,10 @@ function escapeHtml(t) {
 
 async function loadLocalModels() {
     try {
+        // Hide files view if visible
+        const filesView = document.getElementById('local-models-files');
+        if (filesView) filesView.style.display = 'none';
+
         const data = await apiGet('/api/models/local');
         const models = data.models || [];
         document.getElementById('local-models-count').textContent = data.total_count || 0;
@@ -407,8 +420,9 @@ async function loadLocalModels() {
                         <div class="model-name"><i class="bi bi-hdd-rack me-2 text-primary"></i>${m.name}</div>
                         <div class="model-meta"><i class="bi bi-hdd me-1"></i>Size: ${formatBytes(m.size)}</div>
                         <div class="d-flex gap-2 mt-3">
-                            <button class="btn btn-sm btn-success" onclick="useModel('${m.name}')"><i class="bi bi-play-fill"></i> Use</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteModel('${m.name}')"><i class="bi bi-trash"></i> Delete</button>
+                            <button class="btn btn-sm btn-success flex-grow-1" onclick="useModel('${m.name}')"><i class="bi bi-play-fill"></i> Use</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="showLocalModelFiles('${m.name}', '${m.path || ''}')"><i class="bi bi-folder"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteModel('${m.name}')"><i class="bi bi-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -420,6 +434,74 @@ async function loadLocalModels() {
 function useModel(name) {
     navigate('server');
     setTimeout(() => { document.getElementById('srv-model').value = name; }, 100);
+}
+
+async function showLocalModelFiles(name, modelPath = '') {
+    const listEl = document.getElementById('local-models-list');
+    const emptyEl = document.getElementById('local-models-empty');
+    const listContainer = listEl.parentElement;
+
+    // Build file list from local path
+    let filesHtml = '';
+    let backBtnHtml = `<button class="btn btn-outline-secondary mb-3" onclick="loadLocalModels()"><i class="bi bi-arrow-left me-1"></i>Back to Models</button>`;
+
+    if (modelPath) {
+        // Fetch file list via API
+        try {
+            const data = await apiGet(`/api/models/local-files/${encodeURIComponent(name)}`);
+            if (data.files && data.files.length > 0) {
+                filesHtml = `
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h4 class="mb-1"><i class="bi bi-folder me-2"></i>${data.model}</h4>
+                            <span class="text-muted">${data.count} files</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Filename</th>
+                                            <th style="width: 120px;">Size</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.files.map(f => `
+                                            <tr>
+                                                <td class="font-monospace" style="font-size: 0.85rem;">${f.relative_path || f.filename}</td>
+                                                <td>${f.size_human || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                filesHtml = `<div class="text-center text-muted py-5"><i class="bi bi-folder-x" style="font-size: 3rem;"></i><h4 class="mt-3">No files found</h4></div>`;
+            }
+        } catch (e) {
+            filesHtml = `<div class="alert alert-danger">${e.message}</div>`;
+        }
+    } else {
+        filesHtml = `<div class="text-center text-muted py-5"><i class="bi bi-folder-x" style="font-size: 3rem;"></i><h4 class="mt-3">Model path not available</h4></div>`;
+    }
+
+    listEl.style.display = 'none';
+    emptyEl.style.display = 'none';
+
+    // Insert files view
+    let filesView = document.getElementById('local-models-files');
+    if (!filesView) {
+        filesView = document.createElement('div');
+        filesView.id = 'local-models-files';
+        listContainer.appendChild(filesView);
+    }
+    filesView.style.display = 'block';
+    filesView.innerHTML = backBtnHtml + filesHtml;
 }
 
 async function deleteModel(name) {
@@ -452,41 +534,274 @@ async function searchModels() {
                     <div class="model-meta"><i class="bi bi-person me-1"></i>${m.author}</div>
                     <div class="model-tags">${m.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
                     <div class="model-meta"><i class="bi bi-download me-1"></i>${(m.downloads/1000).toFixed(1)}K <i class="bi bi-heart-fill text-danger ms-2"></i>${m.likes}</div>
-                    <button class="btn btn-sm btn-primary w-100 mt-2" onclick="downloadModel('${m.id}')"><i class="bi bi-cloud-download me-1"></i>Download</button>
+                    <div class="d-flex gap-2 mt-2">
+                        <a href="https://huggingface.co/${m.id}" target="_blank" class="btn btn-sm btn-outline-secondary" title="View on HuggingFace">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-info flex-grow-1" onclick="showModelFiles('${m.id}')">
+                            <i class="bi bi-folder me-1"></i>Files
+                        </button>
+                        <button class="btn btn-sm btn-primary flex-grow-1" onclick="downloadModel('${m.id}')">
+                            <i class="bi bi-cloud-download me-1"></i>Download
+                        </button>
+                    </div>
                 </div>
             </div>
         `).join('');
     } catch (e) { container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`; }
 }
 
-async function downloadModel(name) {
+async function downloadModel(name, filename = '') {
     try {
-        const result = await apiPost('/api/models/download', { model_name: name });
-        if (result.status === 'started') { showToast('Download Started', `${name} is downloading`, 'info'); checkProgress(name); }
+        const payload = { model_name: name };
+        if (filename) payload.filename = filename;
+        const result = await apiPost('/api/models/download', payload);
+        const key = result.key || name;
+        if (result.status === 'started') {
+            showToast('Download Started', filename ? `${name}/${filename}` : `${name} is downloading`, 'info');
+            checkProgress(key, name, filename);
+        }
         else showToast('Info', 'Already downloading', 'warning');
     } catch (e) { showToast('Error', e.message, 'error'); }
 }
 
-async function checkProgress(name) {
+async function showModelFiles(name) {
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-3">Loading files...</p></div>';
+    document.getElementById('search-results-list').style.display = 'none';
+
+    try {
+        const data = await apiGet(`/api/models/files/${encodeURIComponent(name)}`);
+        if (data.error) {
+            container.innerHTML = `<div class="alert alert-danger">${data.error}</div>
+                <button class="btn btn-outline-secondary mt-2" onclick="searchModels()"><i class="bi bi-arrow-left me-1"></i>Back to search</button>`;
+            return;
+        }
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="mb-1"><i class="bi bi-folder me-2"></i>${data.model}</h4>
+                    <span class="text-muted">${data.count} files</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="https://huggingface.co/${data.model}" target="_blank" class="btn btn-outline-secondary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>HuggingFace
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="searchModels()">
+                        <i class="bi bi-arrow-left me-1"></i>Back
+                    </button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Filename</th>
+                                    <th style="width: 120px;">Size</th>
+                                    <th style="width: 120px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+
+        if (data.files.length === 0) {
+            html += '<tr><td colspan="3" class="text-center text-muted py-4">No model files found</td></tr>';
+        } else {
+            for (const f of data.files) {
+                html += `
+                    <tr>
+                        <td class="font-monospace" style="font-size: 0.85rem;">${f.filename}</td>
+                        <td>${f.size_human}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="downloadModel('${data.model}', '${f.filename}')">
+                                <i class="bi bi-cloud-download me-1"></i>Download
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="alert alert-danger">${e.message}</div>
+            <button class="btn btn-outline-secondary mt-2" onclick="searchModels()"><i class="bi bi-arrow-left me-1"></i>Back to search</button>`;
+    }
+}
+
+async function checkProgress(key, modelName = '', filename = '') {
     const container = document.getElementById('downloads-in-progress');
+    const displayName = filename ? `${modelName}/${filename}` : modelName || key;
+    const safeId = key.replace(/[^a-zA-Z0-9]/g, '-');
+
+    // Save to localStorage for persistence across page reloads
+    saveDownloadState(key, { model: modelName || key, filename, status: 'downloading', progress: 0 });
+
     const interval = setInterval(async () => {
         try {
-            const p = await apiGet(`/api/models/download-progress/${encodeURIComponent(name)}`);
-            if (p.status === 'not_found') { clearInterval(interval); return; }
-            const id = name.replace(/[^a-zA-Z0-9]/g, '-');
-            let el = document.getElementById(`dl-${id}`);
-            if (!el) {
-                container.innerHTML += `<div class="card mb-3" id="dl-${id}"><div class="card-header d-flex justify-content-between"><span>${name}</span><span id="pct-${id}">0%</span></div><div class="card-body"><div class="progress" style="height: 25px;"><div class="progress-bar progress-bar-striped progress-bar-animated" id="bar-${id}" style="width:0%"></div></div><div class="mt-2 small text-muted" id="det-${id}">Downloading...</div></div></div>`;
+            const p = await apiGet(`/api/models/download-progress/${encodeURIComponent(key)}`);
+            if (p.status === 'not_found') {
+                clearInterval(interval);
+                removeDownloadState(key);
+                return;
             }
+
+            let el = document.getElementById(`dl-${safeId}`);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = `dl-${safeId}`;
+                el.className = 'card mb-3';
+                container.appendChild(el);
+            }
+
             const pct = p.progress || 0;
-            document.getElementById(`pct-${id}`).textContent = `${pct.toFixed(1)}%`;
-            document.getElementById(`bar-${id}`).style.width = `${pct}%`;
-            const det = document.getElementById(`det-${id}`);
-            if (p.status === 'completed') { clearInterval(interval); det.textContent = 'Complete!'; document.getElementById(`bar-${id}`).classList.remove('progress-bar-animated'); document.getElementById(`bar-${id}`).classList.add('bg-success'); showToast('Success', `${name} downloaded`, 'success'); setTimeout(() => { if (el?.parentNode) el.remove(); }, 5000); }
-            else if (p.status === 'failed') { clearInterval(interval); det.textContent = `Failed: ${p.error}`; document.getElementById(`bar-${id}`).classList.add('bg-danger'); }
-            else { det.textContent = p.speed ? `Speed: ${formatBytes(p.speed)}/s` : 'Downloading...'; }
+            const isCancellable = p.status === 'downloading';
+            el.innerHTML = `
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>${displayName}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="pct-${safeId}" class="badge bg-primary">${pct.toFixed(1)}%</span>
+                        ${isCancellable ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelDownload('${key}', '${safeId}')"><i class="bi bi-x-circle me-1"></i>Cancel</button>` : ''}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar ${p.status === 'cancelled' ? 'bg-warning' : p.status === 'failed' ? 'bg-danger' : ''} ${p.status === 'completed' ? 'bg-success' : 'progress-bar-striped progress-bar-animated'}"
+                             id="bar-${safeId}" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="mt-2 small text-muted" id="det-${safeId}"></div>
+                </div>
+            `;
+
+            const det = document.getElementById(`det-${safeId}`);
+            if (p.status === 'completed') {
+                clearInterval(interval);
+                det.textContent = 'Complete!';
+                showToast('Success', `${displayName} downloaded`, 'success');
+                removeDownloadState(key);
+                setTimeout(() => { if (el?.parentNode) el.remove(); }, 5000);
+            } else if (p.status === 'failed') {
+                clearInterval(interval);
+                det.textContent = `Failed: ${p.error || 'Unknown error'}`;
+                removeDownloadState(key);
+            } else if (p.status === 'cancelled') {
+                clearInterval(interval);
+                det.textContent = 'Download cancelled by user';
+                removeDownloadState(key);
+                setTimeout(() => { if (el?.parentNode) el.remove(); }, 5000);
+            } else {
+                det.textContent = p.speed ? `Speed: ${formatBytes(p.speed || 0)}/s` : 'Downloading...';
+                // Update localStorage
+                saveDownloadState(key, { model: modelName || key, filename, status: p.status, progress: pct });
+            }
         } catch (e) { console.error(e); }
     }, 2000);
+}
+
+async function cancelDownload(key, safeId = '') {
+    if (!safeId) safeId = key.replace(/[^a-zA-Z0-9]/g, '-');
+    showConfirm('Cancel Download', 'Stop downloading this model?', async () => {
+        try {
+            await apiDelete(`/api/models/download/${encodeURIComponent(key)}`);
+            const el = document.getElementById(`dl-${safeId}`);
+            if (el) {
+                const det = document.getElementById(`det-${safeId}`);
+                if (det) det.textContent = 'Cancelling...';
+                const bar = document.getElementById(`bar-${safeId}`);
+                if (bar) {
+                    bar.className = 'progress-bar bg-warning';
+                    bar.style.width = '100%';
+                }
+                const cancelBtn = el.querySelector('button');
+                if (cancelBtn) cancelBtn.disabled = true;
+            }
+            showToast('Cancelled', 'Download cancelled', 'info');
+        } catch (e) {
+            showToast('Error', e.message, 'error');
+        }
+    });
+}
+
+// --- localStorage helpers for download persistence ---
+
+const DL_STATE_KEY = 'vllm_downloads';
+
+function getDownloadStates() {
+    try {
+        return JSON.parse(localStorage.getItem(DL_STATE_KEY) || '{}');
+    } catch { return {}; }
+}
+
+function saveDownloadState(key, data) {
+    const states = getDownloadStates();
+    states[key] = { ...states[key], ...data, timestamp: Date.now() };
+    localStorage.setItem(DL_STATE_KEY, JSON.stringify(states));
+}
+
+function removeDownloadState(key) {
+    const states = getDownloadStates();
+    delete states[key];
+    localStorage.setItem(DL_STATE_KEY, JSON.stringify(states));
+}
+
+async function restoreDownloads() {
+    const states = getDownloadStates();
+    const keys = Object.keys(states);
+    if (keys.length === 0) return;
+
+    // Show downloads-in-progress section
+    const container = document.getElementById('downloads-in-progress');
+    if (container && keys.length > 0) {
+        container.style.display = 'block';
+    }
+
+    // Check server for actual progress
+    try {
+        const serverData = await apiGet('/api/models/downloads');
+        const serverDownloads = serverData.downloads || [];
+        const serverKeys = new Set(serverDownloads.map(d => d.key));
+
+        for (const key of keys) {
+            const state = states[key];
+            const displayName = state.filename ? `${state.model}/${state.filename}` : state.model;
+
+            if (serverKeys.has(key)) {
+                const serverEntry = serverDownloads.find(d => d.key === key);
+                if (serverEntry?.status === 'cancelled') {
+                    showToast('Cancelled', `${displayName} was cancelled`, 'info');
+                    removeDownloadState(key);
+                } else {
+                    // Still active on server, resume tracking
+                    checkProgress(key, state.model, state.filename || '');
+                }
+            } else {
+                // Not on server anymore - check if it completed or was lost
+                const progressResp = await apiGet(`/api/models/download-progress/${encodeURIComponent(key)}`);
+                if (progressResp.status === 'completed') {
+                    showToast('Completed', `${displayName} was downloaded`, 'success');
+                } else if (progressResp.status === 'failed') {
+                    showToast('Failed', `${displayName}: ${progressResp.error || 'Unknown error'}`, 'error');
+                } else if (progressResp.status === 'cancelled') {
+                    showToast('Cancelled', `${displayName} was cancelled`, 'info');
+                } else {
+                    // Lost track
+                    showToast('Lost track', `Download status for ${displayName} is unknown`, 'warning');
+                }
+                removeDownloadState(key);
+            }
+        }
+    } catch (e) { console.error('Failed to restore downloads:', e); }
 }
 
 async function refreshMetrics() {

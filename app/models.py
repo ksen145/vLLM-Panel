@@ -36,4 +36,11 @@ class GenerateRequest(BaseModel):
 
 
 class ModelDownloadRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+    
+    model_name: str
+    filename: str = ""
+
+
+class ModelFileRequest(BaseModel):
     model_name: str

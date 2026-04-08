@@ -7,6 +7,20 @@ from pathlib import Path
 from typing import Dict, List
 
 
+def format_bytes(bytes: int) -> str:
+    """Format bytes to human readable string."""
+    if bytes == 0:
+        return "0 B"
+    k = 1024
+    sizes = ["B", "KB", "MB", "GB", "TB"]
+    i = 0
+    val = float(bytes)
+    while val >= k and i < len(sizes) - 1:
+        val /= k
+        i += 1
+    return f"{val:.2f} {sizes[i]}"
+
+
 def get_directory_size(path: Path) -> int:
     """Return total size of all files in directory."""
     total = 0
@@ -123,6 +137,121 @@ def get_local_models() -> Dict:
         "total_count": len(found),
         "total_size": sum(m["size"] for m in found.values()),
     }
+
+
+def get_model_files(model_name: str) -> Dict:
+    """Get list of files for a model from HuggingFace using REST API."""
+    try:
+        import urllib.request
+        import json
+        
+        # Use HuggingFace API directly
+        url = f"https://huggingface.co/api/models/{model_name}/tree/main?recursive=true"
+        
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'vLLM-Panel/4.0',
+            'Accept': 'application/json'
+        })
+        
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        except Exception as e:
+            # Fallback: try without recursive
+            url = f"https://huggingface.co/api/models/{model_name}/tree/main"
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'vLLM-Panel/4.0',
+                'Accept': 'application/json'
+            })
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        
+        # Filter for model files only
+        model_extensions = {'.gguf', '.bin', '.pt', '.pth', '.safetensors', '.onnx', '.h5', '.ckpt', '.pb', '.model'}
+        skip_prefixes = {'.git', 'original/', 'images/'}
+        
+        model_files = []
+        for item in data:
+            if item.get('type') != 'file':
+                continue
+            
+            path = item.get('path', '')
+            
+            # Skip metadata
+            if any(path.startswith(p) for p in skip_prefixes):
+                continue
+            
+            # Only include model files
+            if not any(path.endswith(ext) for ext in model_extensions):
+                continue
+            
+            # Get size from lfs info
+            lfs = item.get('lfs', {})
+            size = lfs.get('size', 0) if isinstance(lfs, dict) else 0
+            
+            model_files.append({
+                "filename": path,
+                "size": size,
+                "size_human": format_bytes(size),
+            })
+        
+        # Sort by size descending
+        model_files.sort(key=lambda x: x["size"], reverse=True)
+        
+        return {"model": model_name, "files": model_files, "count": len(model_files)}
+    
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_local_model_files(model_name: str) -> Dict:
+    """Get list of files for a locally cached model."""
+    # Search in known cache paths
+    search_paths = [
+        Path.home() / ".cache" / "huggingface" / "hub",
+        Path.home() / ".cache" / "modelscope" / "hub",
+        Path.home() / ".cache" / "mlx" / "models",
+        Path.home() / "models",
+    ]
+
+    model_path = None
+
+    for search_path in search_paths:
+        if search_path.exists():
+            # Check for HuggingFace style (models--org--name)
+            hf_name = "models--" + model_name.replace("/", "--")
+            hf_path = search_path / hf_name
+            if hf_path.exists():
+                model_path = hf_path
+                break
+            # Check for direct name match
+            direct_path = search_path / model_name
+            if direct_path.exists():
+                model_path = direct_path
+                break
+
+    if model_path is None:
+        return {"error": "Model path not found", "model": model_name}
+
+    # List files
+    files = []
+    try:
+        for item in model_path.rglob("*"):
+            if item.is_file():
+                rel = item.relative_to(model_path)
+                files.append({
+                    "filename": item.name,
+                    "relative_path": str(rel),
+                    "size": item.stat().st_size,
+                    "size_human": format_bytes(item.stat().st_size),
+                })
+    except (PermissionError, OSError) as e:
+        return {"error": str(e), "model": model_name}
+
+    # Sort by name
+    files.sort(key=lambda x: x["relative_path"])
+
+    return {"model": model_name, "path": str(model_path), "files": files, "count": len(files)}
 
 
 def delete_model_from_cache(model_name: str) -> bool:

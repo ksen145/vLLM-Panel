@@ -31,6 +31,26 @@ class VLLMServerManager:
         self.download_progress: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
+    # Download management
+    # ------------------------------------------------------------------
+
+    def cancel_download(self, key: str) -> bool:
+        """Request cancellation of a download. Returns True if found."""
+        if key not in self.download_progress:
+            # Try to find by model name prefix
+            for k in list(self.download_progress.keys()):
+                if k == key or k.startswith(key + ":"):
+                    key = k
+                    break
+            else:
+                return False
+
+        self.download_progress[key]["status"] = "cancelled"
+        self.download_progress[key]["cancel_requested"] = True
+        print(f"[CANCEL] Download cancelled: {key}")
+        return True
+
+    # ------------------------------------------------------------------
     # Process lifecycle
     # ------------------------------------------------------------------
 
