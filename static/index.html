@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vLLM Panel</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" onclick="navigate('home')">
+                <i class="bi bi-cpu-fill me-2"></i>vLLM Panel
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('home')" data-page="home">
+                            <i class="bi bi-house-door me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('server')" data-page="server">
+                            <i class="bi bi-rocket-takeoff me-1"></i>Server
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('chat')" data-page="chat">
+                            <i class="bi bi-chat-left-text me-1"></i>Chat
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('local')" data-page="local">
+                            <i class="bi bi-hdd-stack me-1"></i>Models
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('search')" data-page="search">
+                            <i class="bi bi-search me-1"></i>Search
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="navigate('status')" data-page="status">
+                            <i class="bi bi-graph-up me-1"></i>Status
+                        </a>
+                    </li>
+                </ul>
+                <span class="navbar-text" id="navbar-status">
+                    <span class="badge bg-secondary" id="server-status-badge">
+                        <i class="bi bi-circle me-1"></i>Offline
+                    </span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 pt-5">
+
+        <div id="page-home" class="page-section">
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 text-center">
+                        <div class="welcome-card">
+                            <div class="mb-4"><i class="bi bi-cpu-fill text-primary" style="font-size: 4rem;"></i></div>
+                            <h1 class="display-4 mb-3">Welcome to vLLM Panel!</h1>
+                            <p class="lead text-muted mb-4">
+                                Manage your vLLM server from the browser. Launch, monitor, and test LLMs with a clean web UI.
+                            </p>
+                            <div class="alert alert-info" id="platform-alert">
+                                <i class="bi bi-info-circle me-2"></i>Detecting platform...
+                            </div>
+                        </div>
+                        <div class="row g-4 mt-3">
+                            <div class="col-md-4">
+                                <div class="feature-card h-100">
+                                    <div class="feature-icon"><i class="bi bi-rocket-takeoff"></i></div>
+                                    <h5>Launch Server</h5>
+                                    <p class="text-muted">Start vLLM with OpenAI-compatible API endpoint</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card h-100">
+                                    <div class="feature-icon text-success"><i class="bi bi-chat-left-text"></i></div>
+                                    <h5>Chat & Test</h5>
+                                    <p class="text-muted">Chat with models, test tool calling and streaming</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card h-100">
+                                    <div class="feature-icon text-info"><i class="bi bi-graph-up-arrow"></i></div>
+                                    <h5>Monitor</h5>
+                                    <p class="text-muted">Track CPU, GPU, and memory in real-time</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="quick-actions mt-5">
+                            <h4 class="mb-3">Quick Actions</h4>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                <button class="btn btn-primary btn-lg" onclick="navigate('server')">
+                                    <i class="bi bi-play-fill me-2"></i>Launch Server
+                                </button>
+                                <button class="btn btn-success btn-lg" onclick="navigate('chat')">
+                                    <i class="bi bi-chat-left-text me-2"></i>Open Chat
+                                </button>
+                                <button class="btn btn-outline-primary btn-lg" onclick="navigate('status')">
+                                    <i class="bi bi-speedometer2 me-2"></i>Status
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">vLLM API</h6>
+                                        <div class="fw-bold" id="home-vllm-url">-</div>
+                                        <div class="text-muted small" id="home-vllm-docs"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">Agents connect to</h6>
+                                        <div class="fw-bold" id="home-agent-url">-</div>
+                                        <div class="text-muted small">Use OpenAI SDK with base_url</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-server" class="page-section d-none">
+            <div class="container py-4">
+                <h2 class="mb-4"><i class="bi bi-rocket-takeoff me-2"></i>vLLM Server</h2>
+                <div class="alert alert-success" id="server-running-alert" style="display: none;">
+                    <strong>Running!</strong> Model: <span id="server-current-model"></span><br>
+                    API: <a href="#" id="server-api-link" target="_blank"></a> |
+                    Docs: <a href="#" id="server-docs-link" target="_blank">OpenAPI Docs</a>
+                </div>
+                <div class="alert alert-secondary" id="server-stopped-alert">
+                    Server is stopped. Configure and launch.
+                </div>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header"><i class="bi bi-gear me-2"></i>Configuration</div>
+                            <div class="card-body">
+                                <form id="server-form">
+                                    <div class="mb-3">
+                                        <label class="form-label">Model *</label>
+                                        <input type="text" class="form-control" id="srv-model" placeholder="e.g. Qwen/Qwen2.5-7B-Instruct" required>
+                                        <div class="form-text">HuggingFace model ID</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Context Length</label>
+                                        <input type="number" class="form-control" id="srv-max-len" value="4096" min="256" max="131072">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">GPU Memory: <span id="srv-gpu-mem-val">0.9</span></label>
+                                        <input type="range" class="form-range" id="srv-gpu-mem" min="0.1" max="1.0" step="0.05" value="0.9">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Tensor Parallel Size</label>
+                                        <select class="form-select" id="srv-tensor">
+                                            <option value="1" selected>1 GPU</option>
+                                            <option value="2">2 GPUs</option>
+                                            <option value="4">4 GPUs</option>
+                                            <option value="8">8 GPUs</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Data Type</label>
+                                        <select class="form-select" id="srv-dtype">
+                                            <option value="auto" selected>Auto</option>
+                                            <option value="float16">Float16</option>
+                                            <option value="bfloat16">BFloat16</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Quantization</label>
+                                        <select class="form-select" id="srv-quant">
+                                            <option value="">None</option>
+                                            <option value="awq">AWQ</option>
+                                            <option value="gptq">GPTQ</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="srv-trust">
+                                        <label class="form-check-label">Trust Remote Code</label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="srv-prefix-cache">
+                                        <label class="form-check-label">Enable Prefix Caching</label>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success btn-lg" id="srv-start-btn">
+                                            <i class="bi bi-play-fill me-2"></i>Start Server
+                                        </button>
+                                        <button type="button" class="btn btn-danger" id="srv-stop-btn" onclick="stopServer()" style="display: none;">
+                                            <i class="bi bi-stop-fill me-2"></i>Stop Server
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-terminal me-2"></i>Server Log</span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs()"><i class="bi bi-arrow-clockwise"></i></button>
+                            </div>
+                            <div class="card-body">
+                                <div id="server-log" class="log-container">
+                                    <div class="text-muted">Server log will appear here...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-chat" class="page-section d-none">
+            <div class="container py-4">
+                <h2 class="mb-4"><i class="bi bi-chat-left-text me-2"></i>Chat / Completions</h2>
+                <div class="alert alert-warning" id="chat-server-offline" style="display: none;">
+                    vLLM server is not running. Go to <a href="#" onclick="navigate('server')">Server</a> page to start it.
+                </div>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="card mb-3">
+                            <div class="card-header"><i class="bi bi-sliders me-2"></i>Parameters</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Messages (JSON)</label>
+                                    <textarea class="form-control" id="chat-messages" rows="8" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">[{"role":"user","content":"Hello! What is 2+2?"}]</textarea>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label">Max Tokens</label>
+                                        <input type="number" class="form-control" id="chat-max-tokens" value="256" min="1" max="8192">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Temperature: <span id="chat-temp-val">0.7</span></label>
+                                        <input type="range" class="form-range" id="chat-temp" min="0" max="2" step="0.05" value="0.7">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Top P: <span id="chat-top-p-val">1.0</span></label>
+                                        <input type="range" class="form-range" id="chat-top-p" min="0" max="1" step="0.05" value="1.0">
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="chat-stream">
+                                            <label class="form-check-label">Stream</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3 mt-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="chat-enable-tools">
+                                        <label class="form-check-label">Enable Tool Calling</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3" id="chat-tools-config" style="display: none;">
+                                    <label class="form-label">Tools (JSON array)</label>
+                                    <textarea class="form-control" id="chat-tools" rows="5" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">[{"type":"function","function":{"name":"get_weather","description":"Get current weather","parameters":{"type":"object","properties":{"location":{"type":"string"}},"required":["location"]}}}]</textarea>
+                                </div>
+                                <div class="d-grid">
+                                    <button class="btn btn-primary btn-lg" id="chat-send-btn" onclick="sendChat()">
+                                        <i class="bi bi-send me-2"></i>Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-output me-2"></i>Response</span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyChatResult()"><i class="bi bi-clipboard me-1"></i>Copy</button>
+                            </div>
+                            <div class="card-body">
+                                <div id="chat-result" class="generation-output" style="min-height: 350px;">
+                                    <div class="text-muted text-center py-5">
+                                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                                        <p class="mt-3">Response will appear here</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-local" class="page-section d-none">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="bi bi-hdd-stack me-2"></i>Local Models</h2>
+                    <button class="btn btn-outline-primary" onclick="loadLocalModels()"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><div class="card bg-light"><div class="card-body text-center"><h5 class="text-muted">Total</h5><h2 id="local-models-count">0</h2></div></div></div>
+                    <div class="col-md-4"><div class="card bg-light"><div class="card-body text-center"><h5 class="text-muted">Size</h5><h2 id="local-models-size">0 GB</h2></div></div></div>
+                    <div class="col-md-4"><div class="card bg-light"><div class="card-body text-center"><h5 class="text-muted">Server</h5><h2 id="local-server-status">-</h2></div></div></div>
+                </div>
+                <div id="local-models-list" class="row g-3"></div>
+                <div id="local-models-empty" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-muted">No models cached</h4>
+                    <button class="btn btn-primary mt-2" onclick="navigate('search')"><i class="bi bi-search me-1"></i>Search Models</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-search" class="page-section d-none">
+            <div class="container py-4">
+                <h2 class="mb-4"><i class="bi bi-search me-2"></i>Search & Download</h2>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="search-input" placeholder="e.g. llama, mistral, qwen..." onkeypress="if(event.key==='Enter') searchModels()">
+                            <button class="btn btn-primary" onclick="searchModels()"><i class="bi bi-search me-1"></i>Search</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="downloads-in-progress" class="mb-4"></div>
+                <div id="search-results">
+                    <div class="text-center py-5 text-muted"><i class="bi bi-cloud-arrow-up" style="font-size: 3rem;"></i><h4 class="mt-3">Search HuggingFace for models</h4></div>
+                </div>
+                <div id="search-results-list" class="row g-3" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="page-status" class="page-section d-none">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="bi bi-graph-up me-2"></i>Status & Metrics</h2>
+                    <button class="btn btn-outline-primary" onclick="refreshMetrics()"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+                </div>
+                <div class="card mb-4">
+                    <div class="card-header"><i class="bi bi-cpu me-2"></i>vLLM Server</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3"><div class="metric-box"><div class="metric-label">Status</div><div class="metric-value" id="status-server-status"><span class="badge bg-secondary">-</span></div></div></div>
+                            <div class="col-md-3"><div class="metric-box"><div class="metric-label">Model</div><div class="metric-value text-truncate" id="status-server-model" style="font-size: 1rem;">-</div></div></div>
+                            <div class="col-md-3"><div class="metric-box"><div class="metric-label">PID</div><div class="metric-value" id="status-server-pid">-</div></div></div>
+                            <div class="col-md-3"><div class="metric-box"><div class="metric-label">Uptime</div><div class="metric-value" id="status-server-uptime">-</div></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header"><i class="bi bi-cpu me-2"></i>CPU</div>
+                            <div class="card-body">
+                                <div class="metric-row"><span class="metric-label">Usage</span><span class="metric-value" id="status-cpu-pct">-</span></div>
+                                <div class="progress mt-2 mb-3" style="height: 20px;"><div class="progress-bar" id="status-cpu-bar" style="width: 0%"></div></div>
+                                <div class="metric-row"><span class="metric-label">Cores</span><span class="metric-value" id="status-cpu-cores">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header"><i class="bi bi-memory me-2"></i>Memory</div>
+                            <div class="card-body">
+                                <div class="metric-row"><span class="metric-label">Used</span><span class="metric-value" id="status-mem-used">-</span></div>
+                                <div class="progress mt-2 mb-3" style="height: 20px;"><div class="progress-bar bg-warning" id="status-mem-bar" style="width: 0%"></div></div>
+                                <div class="metric-row"><span class="metric-label">Total</span><span class="metric-value" id="status-mem-total">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-4" id="gpu-card" style="display: none;">
+                    <div class="card-header"><i class="bi bi-gpu-card me-2"></i>GPU</div>
+                    <div class="card-body" id="gpu-info"></div>
+                </div>
+                <div class="card mb-4" id="vllm-proc-card" style="display: none;">
+                    <div class="card-header"><i class="bi bi-window me-2"></i>vLLM Process</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4"><div class="metric-row"><span class="metric-label">CPU</span><span class="metric-value" id="status-vllm-cpu">-</span></div></div>
+                            <div class="col-md-4"><div class="metric-row"><span class="metric-label">Memory</span><span class="metric-value" id="status-vllm-mem">-</span></div></div>
+                            <div class="col-md-4"><div class="metric-row"><span class="metric-label">Threads</span><span class="metric-value" id="status-vllm-threads">-</span></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+                    <label class="form-check-label">Auto-refresh every 5 seconds</label>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirm-modal-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-info-circle me-2" id="toast-icon"></i>
+                <strong class="me-auto" id="toast-title">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toast-body"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
